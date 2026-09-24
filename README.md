@@ -4,7 +4,7 @@ Servidor **MCP** (Model Context Protocol) que lança horas em work items do Azur
 
 - **Transporte:** Streamable HTTP (stateless) em `POST /mcp`
 - **Stack:** Node.js 18+, TypeScript, Express, `@modelcontextprotocol/sdk`, axios, zod
-- **URL pública:** `https://<seu-app>.up.railway.app/mcp/<MCP_AUTH_TOKEN>` _(preencha depois do deploy)_
+- **URL pública:** `https://azure-devops-hours-mcp-production.up.railway.app/mcp/<MCP_AUTH_TOKEN>`
 
 ## Como o lançamento funciona
 
@@ -218,6 +218,14 @@ curl https://azure-devops-hours.up.railway.app/health
 Nos logs do deploy deve aparecer `PAT válido` e `Campos de horas resolvidos`.
 
 O Railway injeta `PORT` automaticamente, e o servidor respeita esse valor.
+
+O `railway.json` liga o modo **Serverless** (`sleepApplication`). O servidor dorme quando fica sem tráfego e acorda na próxima chamada; a primeira chamada depois de um tempo parado demora alguns segundos a mais.
+
+Para publicar uma nova versão pela CLI:
+
+```bash
+railway up --ci
+```
 
 ### Render
 
