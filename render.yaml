@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: azure-devops-hours-mcp
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: AZURE_DEVOPS_ORG
+        sync: false
+      - key: AZURE_DEVOPS_PROJECT
+        sync: false
+      - key: AZURE_DEVOPS_PAT
+        sync: false
+      - key: MCP_AUTH_TOKEN
+        generateValue: true
+      - key: AZURE_DEVOPS_HOURS_FIELD
+        sync: false
