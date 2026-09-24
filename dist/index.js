@@ -16,7 +16,7 @@ async function main() {
         logger.warn('MCP_AUTH_TOKEN não configurado: endpoint /mcp sem proteção (aceitável só em desenvolvimento local).');
     }
     const client = new AzureDevOpsClient(config);
-    const fields = new FieldResolver(client, { hoursField: config.hoursField, estimateField: config.estimateField });
+    const fields = new FieldResolver(client, { hoursField: config.hoursField, estimateField: config.estimateField, startDateField: config.startDateField });
     const workItems = new WorkItemService(client, fields);
     // Valida o PAT sem derrubar o servidor (o Azure pode estar fora do ar no boot).
     client

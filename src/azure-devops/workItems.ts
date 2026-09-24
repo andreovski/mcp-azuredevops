@@ -32,10 +32,14 @@ export type AddHoursResult = {
   previousHours: number;
   newTotal: number;
   field: string;
+  /** true quando a task estava em New e foi movida para Active para aceitar as horas. */
+  activated: boolean;
   url: string;
 };
 
 const MAX_CONFLICT_RETRIES = 3;
+const NEW_STATE = 'New';
+const ACTIVE_STATE = 'Active';
 
 function asNumber(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null;
@@ -95,17 +99,28 @@ export class WorkItemService {
       const previous = asNumber(raw.fields[f.consumed]) ?? 0;
       const newTotal = round2(previous + input.hours);
 
+      const ops: { op: string; path: string; value: unknown }[] = [
+        { op: 'test', path: '/rev', value: raw.rev },
+        { op: 'add', path: `/fields/${f.consumed}`, value: newTotal },
+        { op: 'add', path: '/fields/System.History', value: historyComment(input) },
+      ];
+      // O processo bloqueia "Horas consumidas" em New e exige "Data de início" para ir a Active:
+      // ativa a task na mesma alteração, como é feito manualmente.
+      const activated = raw.fields['System.State'] === NEW_STATE;
+      if (activated) {
+        ops.push({ op: 'add', path: '/fields/System.State', value: ACTIVE_STATE });
+        if (f.startDate && !raw.fields[f.startDate]) {
+          ops.push({ op: 'add', path: `/fields/${f.startDate}`, value: `${input.date}T12:00:00Z` });
+        }
+      }
+
       try {
         await this.client.request(
           {
             method: 'patch',
             url: this.client.projectPath(`/wit/workitems/${input.workItemId}`),
             headers: { 'Content-Type': 'application/json-patch+json' },
-            data: [
-              { op: 'test', path: '/rev', value: raw.rev },
-              { op: 'add', path: `/fields/${f.consumed}`, value: newTotal },
-              { op: 'add', path: '/fields/System.History', value: historyComment(input) },
-            ],
+            data: ops,
           },
           { workItemId: input.workItemId },
         );
@@ -132,6 +147,7 @@ export class WorkItemService {
         previousHours: previous,
         newTotal,
         field: f.consumed,
+        activated,
         url: this.client.webUrl(input.workItemId),
       };
     }

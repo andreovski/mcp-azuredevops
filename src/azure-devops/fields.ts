@@ -9,24 +9,31 @@ export type HoursFields = {
   consumed: string;
   /** Campo lido como estimativa ("Horas estimadas"). */
   estimate: string;
+  /** Campo "Data de início", exigido ao mover a task para Active (se existir no processo). */
+  startDate?: string;
 };
 
 type FieldDef = { name: string; referenceName: string; type?: string };
+
+export type FieldOverrides = { hoursField?: string; estimateField?: string; startDateField?: string };
 
 export const normalize = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
 
 const CONSUMED_NAMES = ['horas consumidas'];
 const ESTIMATE_NAMES = ['horas estimadas'];
+const START_DATE_NAMES = ['data de inicio'];
 
-function findByName(fields: FieldDef[], names: string[]): string | undefined {
+const isNumeric = (f: FieldDef) => !f.type || f.type === 'double' || f.type === 'integer';
+const isDate = (f: FieldDef) => !f.type || f.type === 'dateTime';
+
+function findByName(fields: FieldDef[], names: string[], accept: (f: FieldDef) => boolean = isNumeric): string | undefined {
   const wanted = names.map(normalize);
-  const numeric = fields.filter((f) => !f.type || f.type === 'double' || f.type === 'integer');
-  return numeric.find((f) => wanted.includes(normalize(f.name)))?.referenceName;
+  return fields.filter(accept).find((f) => wanted.includes(normalize(f.name)))?.referenceName;
 }
 
 /**
- * Resolve (uma vez, com cache) os reference names dos campos de horas.
+ * Resolve (uma vez, com cache) os reference names dos campos de horas e de "Data de início".
  * Ordem: env explícita → campo com nome "Horas consumidas"/"Horas estimadas" → campos padrão do Azure.
  */
 export class FieldResolver {
@@ -34,7 +41,7 @@ export class FieldResolver {
 
   constructor(
     private readonly client: AzureDevOpsClient,
-    private readonly overrides: { hoursField?: string; estimateField?: string } = {},
+    private readonly overrides: FieldOverrides = {},
   ) {}
 
   resolve(): Promise<HoursFields> {
@@ -48,14 +55,15 @@ export class FieldResolver {
   }
 
   private async discover(): Promise<HoursFields> {
-    const { hoursField, estimateField } = this.overrides;
-    if (hoursField && estimateField) return { consumed: hoursField, estimate: estimateField };
+    const { hoursField, estimateField, startDateField } = this.overrides;
+    if (hoursField && estimateField && startDateField) return { consumed: hoursField, estimate: estimateField, startDate: startDateField };
 
     const data = await this.client.request<{ value: FieldDef[] }>({ method: 'get', url: this.client.orgPath('/wit/fields') });
     const fields = data?.value ?? [];
     const result: HoursFields = {
       consumed: hoursField ?? findByName(fields, CONSUMED_NAMES) ?? COMPLETED_WORK,
       estimate: estimateField ?? findByName(fields, ESTIMATE_NAMES) ?? ORIGINAL_ESTIMATE,
+      startDate: startDateField ?? findByName(fields, START_DATE_NAMES, isDate),
     };
     logger.info('Campos de horas resolvidos', result);
     return result;

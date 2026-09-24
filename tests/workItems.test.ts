@@ -10,6 +10,7 @@ const PAT = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const BASE = 'https://dev.azure.com';
 const WI = '/myorg/My%20Project/_apis/wit/workitems';
 const CUSTOM = 'Custom.HorasConsumidas';
+const START = 'Custom.95584bf4';
 
 function makeService(opts: { timeoutMs?: number } = {}) {
   const client = new AzureDevOpsClient(
@@ -29,16 +30,18 @@ function mockFields() {
         { name: 'Completed Work', referenceName: 'Microsoft.VSTS.Scheduling.CompletedWork', type: 'double' },
         { name: 'Horas Consumidas', referenceName: CUSTOM, type: 'double' },
         { name: 'Horas estimadas', referenceName: 'Custom.HorasEstimadas', type: 'double' },
+        { name: 'Data de início da semana', referenceName: 'Custom.OutraData', type: 'dateTime' },
+        { name: 'Data de Início', referenceName: START, type: 'dateTime' },
       ],
     });
 }
 
-function mockGet(id: number, rev: number, consumed?: number, status = 200) {
+function mockGet(id: number, rev: number, consumed?: number, status = 200, extra: Record<string, unknown> = {}) {
   return nock(BASE)
     .get(`${WI}/${id}`)
     .query(true)
     .reply(status, status === 200
-      ? { id, rev, fields: { 'System.Title': `Item ${id}`, 'System.WorkItemType': 'Task', 'System.State': 'Active', ...(consumed !== undefined ? { [CUSTOM]: consumed } : {}) } }
+      ? { id, rev, fields: { 'System.Title': `Item ${id}`, 'System.WorkItemType': 'Task', 'System.State': 'Active', ...(consumed !== undefined ? { [CUSTOM]: consumed } : {}), ...extra } }
       : { message: 'erro' });
 }
 
@@ -84,6 +87,38 @@ describe('addHours', () => {
     const r = await makeService().addHours({ workItemId: 1, hours: 1.25, date: '2026-09-24' });
     expect(r.newTotal).toBe(1.25);
     expect(JSON.stringify(body)).not.toContain('RemainingWork');
+  });
+
+  it('task em New: ativa e preenche "Data de início" na mesma alteração', async () => {
+    mockFields();
+    mockGet(117466, 3, undefined, 200, { 'System.State': 'New' });
+    let body: any;
+    nock(BASE).patch(`${WI}/117466`, (b) => ((body = b), true)).query(true).reply(200, {});
+    const r = await makeService().addHours({ workItemId: 117466, hours: 0.1, date: '2026-09-24' });
+    expect(r.activated).toBe(true);
+    expect(body).toContainEqual({ op: 'add', path: '/fields/System.State', value: 'Active' });
+    expect(body).toContainEqual({ op: 'add', path: `/fields/${START}`, value: '2026-09-24T12:00:00Z' });
+    expect(body).toContainEqual({ op: 'add', path: `/fields/${CUSTOM}`, value: 0.1 });
+  });
+
+  it('task em New com "Data de início" já preenchida: não sobrescreve a data', async () => {
+    mockFields();
+    mockGet(2, 1, undefined, 200, { 'System.State': 'New', [START]: '2026-09-20T12:00:00Z' });
+    let body: any;
+    nock(BASE).patch(`${WI}/2`, (b) => ((body = b), true)).query(true).reply(200, {});
+    await makeService().addHours({ workItemId: 2, hours: 1, date: '2026-09-24' });
+    expect(body.some((op: any) => op.path === `/fields/${START}`)).toBe(false);
+    expect(body).toContainEqual({ op: 'add', path: '/fields/System.State', value: 'Active' });
+  });
+
+  it('task já ativa: não mexe no estado', async () => {
+    mockFields();
+    mockGet(9, 1, 1);
+    let body: any;
+    nock(BASE).patch(`${WI}/9`, (b) => ((body = b), true)).query(true).reply(200, {});
+    const r = await makeService().addHours({ workItemId: 9, hours: 1, date: '2026-09-24' });
+    expect(r.activated).toBe(false);
+    expect(body.some((op: any) => op.path === '/fields/System.State')).toBe(false);
   });
 
   it('relê e tenta de novo quando o rev mudou (412)', async () => {

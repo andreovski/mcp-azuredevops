@@ -17,6 +17,18 @@ Para cada lançamento, o servidor:
    - inclui `test /rev`: se alguém editar o item no meio do lançamento, o servidor relê o item e tenta de novo (até 3x), sem perder horas.
 3. **Não altera** Remaining Work nem "Horas estimadas".
 
+### Tasks em "New"
+
+O processo da organização tem a regra **"Travar apontamento no status new"**: enquanto a task está em _New_, "Horas Consumidas" fica somente leitura. Para ir a _Active_, o campo **"Data de início"** é obrigatório.
+
+Por isso, quando a task está em _New_, o servidor faz tudo **na mesma alteração**, do mesmo jeito que é feito à mão:
+
+- muda o estado para **Active**;
+- preenche **"Data de início"** com a data do lançamento, só se o campo estiver vazio;
+- soma as horas.
+
+O resultado traz `"activated": true` para avisar que a task foi ativada. Tasks em _Active_ ou _Closed_ não têm o estado alterado.
+
 > O Azure DevOps nativo não guarda horas por data: o campo é cumulativo. Por isso a data e a descrição ficam no histórico do item.
 
 ### Qual campo é "Horas consumidas"?
@@ -139,6 +151,7 @@ cp .env.example .env
 | `MCP_AUTH_TOKEN` | ✅ em produção | Segredo que protege o endpoint. Gere com `openssl rand -hex 32` |
 | `AZURE_DEVOPS_HOURS_FIELD` | – | Reference name de "Horas consumidas" (senão é descoberto automaticamente) |
 | `AZURE_DEVOPS_ESTIMATE_FIELD` | – | Reference name de "Horas estimadas" |
+| `AZURE_DEVOPS_START_DATE_FIELD` | – | Reference name de "Data de início", preenchido ao ativar uma task em New (senão é descoberto pelo nome) |
 | `PORT` | – | Porta do servidor (padrão `3000`) |
 | `TIMEZONE` | – | Fuso usado quando `date` é omitido (padrão `America/Sao_Paulo`) |
 

@@ -35,10 +35,11 @@ async function main() {
     console.log(`  ${ref.padEnd(50)} ${name.padEnd(30)} ${shown}${hint}`);
   }
 
-  const resolved = await new FieldResolver(client, { hoursField: config.hoursField, estimateField: config.estimateField }).resolve();
+  const resolved = await new FieldResolver(client, { hoursField: config.hoursField, estimateField: config.estimateField, startDateField: config.startDateField }).resolve();
   console.log(`\nO servidor vai SOMAR horas em: ${resolved.consumed}`);
   console.log(`e ler a estimativa de:        ${resolved.estimate}`);
-  console.log('\nSe estiver errado, defina AZURE_DEVOPS_HOURS_FIELD / AZURE_DEVOPS_ESTIMATE_FIELD no .env.');
+  console.log(`Data de início (ao ativar):   ${resolved.startDate ?? '(não encontrado)'}`);
+  console.log('\nSe estiver errado, defina AZURE_DEVOPS_HOURS_FIELD / AZURE_DEVOPS_ESTIMATE_FIELD / AZURE_DEVOPS_START_DATE_FIELD no .env.');
 }
 
 main().catch((err) => {

@@ -25,6 +25,7 @@ const EnvSchema = z.object({
     .regex(/^[A-Za-z0-9]+$/, 'AZURE_DEVOPS_PAT contém caracteres inválidos'),
   AZURE_DEVOPS_HOURS_FIELD: z.preprocess(emptyToUndefined, z.string().trim().optional()),
   AZURE_DEVOPS_ESTIMATE_FIELD: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  AZURE_DEVOPS_START_DATE_FIELD: z.preprocess(emptyToUndefined, z.string().trim().optional()),
   MCP_AUTH_TOKEN: z.preprocess(emptyToUndefined, z.string().min(16, 'MCP_AUTH_TOKEN deve ter ao menos 16 caracteres').optional()),
   PORT: z.coerce.number().int().positive().default(3000),
   TIMEZONE: z.preprocess(emptyToUndefined, z.string().default('America/Sao_Paulo')),
@@ -37,6 +38,7 @@ export type Config = {
   pat: string;
   hoursField?: string;
   estimateField?: string;
+  startDateField?: string;
   authToken?: string;
   port: number;
   timezone: string;
@@ -56,6 +58,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     pat: e.AZURE_DEVOPS_PAT,
     hoursField: e.AZURE_DEVOPS_HOURS_FIELD,
     estimateField: e.AZURE_DEVOPS_ESTIMATE_FIELD,
+    startDateField: e.AZURE_DEVOPS_START_DATE_FIELD,
     authToken: e.MCP_AUTH_TOKEN,
     port: e.PORT,
     timezone: e.TIMEZONE,
