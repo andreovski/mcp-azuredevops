@@ -2,9 +2,20 @@ import dotenv from 'dotenv';
 import { z } from 'zod';
 dotenv.config({ quiet: true });
 const emptyToUndefined = (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v);
+/** Aceita nomes copiados da URL do navegador ("Meu%20Projeto") e os decodifica. */
+const urlDecoded = (v) => {
+    if (typeof v !== 'string')
+        return v;
+    try {
+        return decodeURIComponent(v.trim());
+    }
+    catch {
+        return v.trim();
+    }
+};
 const EnvSchema = z.object({
-    AZURE_DEVOPS_ORG: z.string().trim().min(1, 'AZURE_DEVOPS_ORG não configurado'),
-    AZURE_DEVOPS_PROJECT: z.string().trim().min(1, 'AZURE_DEVOPS_PROJECT não configurado'),
+    AZURE_DEVOPS_ORG: z.preprocess(urlDecoded, z.string().min(1, 'AZURE_DEVOPS_ORG não configurado')),
+    AZURE_DEVOPS_PROJECT: z.preprocess(urlDecoded, z.string().min(1, 'AZURE_DEVOPS_PROJECT não configurado')),
     AZURE_DEVOPS_PAT: z
         .string()
         .trim()

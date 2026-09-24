@@ -63,6 +63,11 @@ describe('config', () => {
     expect(c).toMatchObject({ port: 3000, timezone: 'America/Sao_Paulo', hoursField: undefined });
   });
 
+  it('decodifica nome de projeto copiado da URL', () => {
+    expect(loadConfig({ ...base, AZURE_DEVOPS_PROJECT: 'Plataforma%20Super%20App' }).project).toBe('Plataforma Super App');
+    expect(loadConfig({ ...base, AZURE_DEVOPS_PROJECT: 'Plataforma Super App' }).project).toBe('Plataforma Super App');
+  });
+
   it('falha sem PAT sem expor valores', () => {
     expect(() => loadConfig({ ...base, AZURE_DEVOPS_PAT: '' })).toThrow('AZURE_DEVOPS_PAT');
   });
